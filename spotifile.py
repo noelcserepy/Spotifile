@@ -128,7 +128,7 @@ from filewalk2 import filewalk as fw
 if len(filedir) < 1:
     querylist.extend(fw())
 else:
-    querylist.extend(fw("C:/Users/noelc/Desktop/Musig/" + filedir))
+    querylist.extend(fw(filedir))
 
 #Stores track and artist names seperately for search step
 qtracknames = querylist[0]
