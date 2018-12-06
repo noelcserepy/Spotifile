@@ -141,17 +141,18 @@ addcount = 0
 
 #Searching query in Spotify and removing found tracks from querylist
 def searchstep(querytrack, queryartist, query_format, id, name, count):
-    for n, q in enumerate(querytrack):
-        tracksearch = sp.search(eval(query_format), limit=50, offset=0, type='track', market=None)
-        trackdist_result = trackdist(tracksearch, q, queryartist, n)
-        if trackdist_result[0]:
-            count += 1
-            id.append(trackdist_result[0])
-            name.append(trackdist_result[1])
-            if q in querytrack:
-                querytrack.remove(q)
-                if queryartist[n] in queryartist:
-                    queryartist.remove(queryartist[n])
+    if querytrack:
+        for n, q in enumerate(querytrack):
+            tracksearch = sp.search(eval(query_format), limit=50, offset=0, type='track', market=None)
+            trackdist_result = trackdist(tracksearch, q, queryartist, n)
+            if trackdist_result[0]:
+                count += 1
+                id.append(trackdist_result[0])
+                name.append(trackdist_result[1])
+                if q in querytrack:
+                    querytrack.remove(q)
+                    if queryartist[n] in queryartist:
+                        queryartist.remove(queryartist[n])
 
 
 #Looping through search results to find closest track
