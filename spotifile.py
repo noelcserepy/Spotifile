@@ -8,7 +8,7 @@ import json
 import oauth2
 import re
 import jellyfish
-from SpotifyUserData import username, clientid, clientsecret
+from SpotifyUserData1 import username, clientid, clientsecret
 
 scope = 'user-library-read, playlist-modify-private, playlist-modify-private'
 
@@ -128,162 +128,115 @@ from filewalk2 import filewalk as fw
 if len(filedir) < 1:
     querylist.extend(fw())
 else:
-    querylist.extend(fw(filedir))
+    querylist.extend(fw("C:/Users/noelc/Desktop/Musig" + filedir))
 
-#Stores track and artist names seperately for search step
+#Setting up variables for search step
 qtracknames = querylist[0]
 qartistnames = querylist[1]
-
-#Search for track and add it to playlist
-track_name = []
 track_id = []
+track_name = []
+starting_track_count = len(qtracknames)
 addcount = 0
 
-qtracknames2 = []
-qartistnames2 = []
 
-qtracknames3 = []
-qartistnames3 = []
+#Searching query in Spotify and removing found tracks from querylist
+def searchstep(querytrack, queryartist, query_format, id, name, count):
+    for n, q in enumerate(querytrack):
+        tracksearch = sp.search(eval(query_format), limit=50, offset=0, type='track', market=None)
+        trackdist_result = trackdist(tracksearch, q, queryartist, n)
+        if trackdist_result[0]:
+            count += 1
+            id.append(trackdist_result[0])
+            name.append(trackdist_result[1])
+            if q in querytrack:
+                querytrack.remove(q)
+                if queryartist[n] in queryartist:
+                    queryartist.remove(queryartist[n])
 
-qtracknames4 = []
-qartistnames4 = []
 
-qtracknames5 = []
-qartistnames5 = []
-#Searching for tracknames
-print("Round 1:", len(qtracknames), "tracks")
-for n, q in enumerate(qtracknames):
-    tracksearch = sp.search(q, limit=50, offset=0, type='track', market=None)
-    added = False
 #Looping through search results to find closest track
 #If trackname distance is > 0.8 then check artist names
 #If artistname distance is > 0.8 then add track id and name to lists
-    for item in tracksearch["tracks"]["items"]:
+def trackdist(searchresult, trackname, artistlist, n):
+    added = False
+    track_found_id = None
+    track_found_name = None
+    for item in searchresult["tracks"]["items"]:
         tname = item["name"]
-        tdist = jellyfish.jaro_winkler(tname, q)
+        tdist = jellyfish.jaro_winkler(tname, trackname)
         if tdist > 0.8:
             for art in item["artists"]:
                 aname = art["name"]
-                adist = jellyfish.jaro_winkler(aname, qartistnames[n])
+                adist = jellyfish.jaro_winkler(aname, artistlist[n])
                 if adist > 0.8:
-                    track_id.append(item["id"])
-                    track_name.append(tname)
+                    track_found_id = item["id"]
+                    track_found_name = tname
                     added = True
-                    addcount = addcount + 1
                     print("Found:", item["id"], tname)
                     break
         if added == True: break
+    return track_found_id, track_found_name
 
-    if added == False:
-        qtracknames2.append(q)
-        qartistnames2.append(qartistnames[n])
+
+#Searching for tracknames
+print("Round 1:", len(qtracknames), "tracks")
+format = "q"
+searchstep(qtracknames, qartistnames, format, track_id, track_name, addcount)
+
 
 #Round 2: Searching for track without "(Original Mix)"
-for n, q in enumerate(qtracknames2):
+for n, q in enumerate(qtracknames):
     if re.search("(.+?)(?=\(Original Mix\))", q):
-        qtracknames2[n] = re.search("(.+?)(?=\s\(Original Mix\))", q).group()
+        qtracknames[n] = re.search("(.+?)(?=\s\(Original Mix\))", q).group()
 
+print("Round 2:", len(qtracknames), "tracks")
+format = "q"
+searchstep(qtracknames, qartistnames, format, track_id, track_name, addcount)
 
-print("Round 2:", len(qtracknames2), "tracks")
-if qtracknames2:
-    for n, q in enumerate(qtracknames2):
-        omixsearch = sp.search(q, limit=50, offset=0, type='track', market=None)
-        added2 = False
-        for item in omixsearch["tracks"]["items"]:
-            tname = item["name"]
-            tdist = jellyfish.jaro_winkler(tname, q)
-            if tdist > 0.8:
-                for art in item["artists"]:
-                    aname = art["name"]
-                    adist = jellyfish.jaro_winkler(aname, qartistnames2[n])
-                    if adist > 0.8:
-                        track_id.append(item["id"])
-                        track_name.append(tname)
-                        added2 = True
-                        addcount = addcount + 1
-                        print("Found:", item["id"], tname)
-                        break
-            if added2 == True: break
-
-        if added2 == False:
-            qtracknames3.append(q)
-            qartistnames3.append(qartistnames2[n])
 
 #Round 3: searching for artist name and track name without "(Original Mix)"
-print("Round 3:", len(qtracknames3), "tracks")
-if qtracknames3:
-    for n, q in enumerate(qtracknames3):
-        aandtsearch = sp.search(qartistnames3[n] + " " + q, limit=50, offset=0, type='track', market=None)
-        added3 = False
-        for item in aandtsearch["tracks"]["items"]:
-            tname = item["name"]
-            tdist = jellyfish.jaro_winkler(tname, q)
-            if tdist > 0.8:
-                for art in item["artists"]:
-                    aname = art["name"]
-                    adist = jellyfish.jaro_winkler(aname, qartistnames3[n])
-                    if adist > 0.8:
-                        track_id.append(item["id"])
-                        track_name.append(tname)
-                        added3 = True
-                        addcount = addcount + 1
-                        print("Found:", item["id"], tname)
-                        break
-            if added3 == True: break
+print("Round 3:", len(qtracknames), "tracks")
+format = "qartistnames[n] + \" \" + q"
+searchstep(qtracknames, qartistnames, format, track_id, track_name, addcount)
 
-        if added3 == False:
-            qtracknames4.append(q)
-            qartistnames4.append(qartistnames3[n])
 
 #Round 4: removing any featuring artists from track names
-for n, q in enumerate(qtracknames4):
+for n, q in enumerate(qtracknames):
     a = q.split("feat.")
     if len(a) > 1:
         if re.search("(?=\(.*\))", a[1]):
             aappend = re.search("(\(.*\))", a[1]).group(0)
-            qtracknames4[n] = a[0].strip() + " " + aappend.strip()
+            qtracknames[n] = a[0].strip() + " " + aappend.strip()
         else:
-            qtracknames4[n] = a[0].strip()
+            qtracknames[n] = a[0].strip()
 
     b = q.split("Feat.")
     if len(b) > 1:
         if re.search("(?=\(.*\))", b[1]):
             bappend = re.search("(\(.*\))", b[1]).group(0)
-            qtracknames4[n] = b[0].strip() + " " + bappend.strip()
+            qtracknames[n] = b[0].strip() + " " + bappend.strip()
         else:
-            qtracknames4[n] = b[0].strip()
+            qtracknames[n] = b[0].strip()
 
-print("Round 4:", len(qtracknames4), "tracks")
-if qtracknames4:
-    for n, q in enumerate(qtracknames4):
-        featsearch = sp.search(q, limit=50, offset=0, type='track', market=None)
-        added4 = False
-        for item in featsearch["tracks"]["items"]:
-            tname = item["name"]
-            tdist = jellyfish.jaro_winkler(tname, q)
-            if tdist > 0.8:
-                for art in item["artists"]:
-                    aname = art["name"]
-                    adist = jellyfish.jaro_winkler(aname, qartistnames4[n])
-                    if adist > 0.8:
-                        track_id.append(item["id"])
-                        track_name.append(tname)
-                        added4 = True
-                        addcount = addcount + 1
-                        print("Found:", item["id"], tname)
-                        break
-            if added4 == True: break
+print("Round 4:", len(qtracknames), "tracks")
+format = "q"
+searchstep(qtracknames, qartistnames, format, track_id, track_name, addcount)
 
-        if added4 == False:
-            qtracknames5.append(q)
-            qartistnames5.append(qartistnames4[n])
 
 #Saving track ids for future purposes
 ftrackid = open("ftrackid.py", "w")
 ftrackid.write(str(track_id))
 ftrackid.close()
 
-#Adding tracks to playlist. Since sp.user_playlist_add_tracks() breaks at a certain point, I decided to send it chunks of 50 track IDs at a time
+
+#Some stats
+print("Successfully found", len(track_id), "tracks")
+print("Failed to find", starting_track_count - len(track_id), "tracks")
+print("Ratio:", len(track_id) / starting_track_count)
+
+
+
+#Adding tracks to playlist. Since sp.user_playlist_add_tracks() breaks at a certain list size, I decided to send it chunks of 50 track IDs at a time
 print("Attempting to add: ", len(track_id), "tracks.")
 for i in range(0, len(track_id), 50):
     chunk = track_id[i:i + 50]
@@ -292,10 +245,8 @@ for i in range(0, len(track_id), 50):
     except:
         print("Failed to add tracks to playlist")
 
-print("Successfully added", addcount, "tracks")
-print("Failed to add", len(qtracknames)-addcount, "tracks")
-print("Ratio:", addcount/len(qtracknames))
 
-for n, q in enumerate(qtracknames5):
-    if not qartistnames5 or not qtracknames5: break
-    print("Failed to add:", qartistnames5[n], "-", qtracknames5[n])
+#Failed tracks list
+for n, q in enumerate(qtracknames):
+    if not qartistnames or not qtracknames: break
+    print("Failed to add:", qartistnames[n], "-", qtracknames[n])
