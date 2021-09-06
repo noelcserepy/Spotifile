@@ -1,8 +1,6 @@
 # Welcome to Spotifile
 
-The easy way to locate aiff files on your hard drive and add them to a new Spotify playlist. 
-This is my first coding project so I'm sure many things can be improved. If you have any suggestions, let me know. 
-You can of course also commit to Spotifile. Enjoy!
+Script to locate aiff files on your hard drive and add them to a new Spotify playlist. 
 
 # Dependencies:
 
